@@ -5373,7 +5373,10 @@ static void __init samsung_m2_init(void)
 #if defined(CONFIG_NFC_PN544)
 	pn544_init();
 #endif
+#if defined(CONFIG_VIDEO_MHL_V2)
 	msm8960_mhl_gpio_init();
+#endif
+
 	register_i2c_devices();
 	msm8960_init_fb();
 	main_mic_bias_init();
