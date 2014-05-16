@@ -5347,7 +5347,11 @@ static void __init samsung_m2_init(void)
 	msm8960_pm8921_gpio_mpp_init();
 	platform_add_devices(m2_devices, ARRAY_SIZE(m2_devices));
 	msm8960_init_hsic();
+	
+#ifdef CONFIG_MSM_CAMERA	
 	msm8960_init_cam();
+#endif
+	
 	msm8960_init_mmc();
 	if (machine_is_msm8960_liquid())
 		mxt_init_hw_liquid();

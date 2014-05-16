@@ -128,6 +128,7 @@ static struct gpiomux_setting cam_settings[] = {
 	},
 };
 
+#ifdef CONFIG_MSM_CAMERA
 static struct msm_gpiomux_config msm8960_cam_common_configs[] = {
 #ifdef CONFIG_S5C73M3
 	{
@@ -218,8 +219,6 @@ static struct msm_gpiomux_config msm8960_cam_common_configs[] = {
 	},
 #endif
 };
-
-#ifdef CONFIG_MSM_CAMERA
 
 #if defined(CONFIG_S5C73M3) && defined(CONFIG_S5K6A3YX)
 static struct msm_gpiomux_config msm8960_cam_2d_configs[] = {
