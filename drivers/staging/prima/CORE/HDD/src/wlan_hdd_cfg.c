@@ -2365,6 +2365,14 @@ REG_VARIABLE(CFG_BTC_SAP_ACTIVE_BT_LEN_NAME, WLAN_PARAM_Integer,
                  CFG_ROAMING_DFS_CHANNEL_DEFAULT,
                  CFG_ROAMING_DFS_CHANNEL_MIN,
                  CFG_ROAMING_DFS_CHANNEL_MAX ),
+
+   REG_VARIABLE( CFG_ENABLE_STRICT_REGULATORY_FOR_FCC_NAME, WLAN_PARAM_Integer,
+                hdd_config_t, gEnableStrictRegulatoryForFCC,
+                VAR_FLAGS_OPTIONAL | VAR_FLAGS_RANGE_CHECK_ASSUME_DEFAULT,
+                CFG_ENABLE_STRICT_REGULATORY_FOR_FCC_DEFAULT,
+                CFG_ENABLE_STRICT_REGULATORY_FOR_FCC_MIN,
+                CFG_ENABLE_STRICT_REGULATORY_FOR_FCC_MAX ),
+
 };
 
 /*
@@ -2393,7 +2401,6 @@ static char* get_next_line(char* str)
   }
   else
   {
-    *str = '\0';
     return (str+1);
   }
 
@@ -2493,7 +2500,7 @@ VOS_STATUS hdd_parse_config_ini(hdd_context_t* pHddCtx)
       goto config_exit;
    }
 
-   hddLog(LOG1, "%s: qcom_cfg.ini Size %d\n",__func__, fw->size);
+   hddLog(LOGE, "%s: qcom_cfg.ini Size %zu", __func__, fw->size);
 
    buffer = (char*)vos_mem_malloc(fw->size);
 
@@ -2509,7 +2516,26 @@ VOS_STATUS hdd_parse_config_ini(hdd_context_t* pHddCtx)
 
    while (buffer != NULL)
    {
+      /*
+       * get_next_line function used to modify the \n and \r delimiter
+       * to \0 before returning, without checking if it is over parsing the
+       * source buffer. So changed the function not to modify the buffer
+       * passed to it and letting the calling/caller function to take
+       * care of the return pointer validation and modification of the buffer.
+       * So validating if the return pointer is not greater than the end
+       * buffer address and modifying the buffer value.
+       */
       line = get_next_line(buffer);
+      if(line > (pTemp + fw->size)) {
+         hddLog(VOS_TRACE_LEVEL_FATAL, "%s: INI file seems to be corrupted",
+                  __func__);
+         vos_status = VOS_STATUS_E_FAILURE;
+         goto config_exit;
+      }
+      else if(line) {
+         *(line - 1) = '\0';
+      }
+
       buffer = i_trim(buffer);
 
       hddLog(LOG1, "%s: item", buffer);
@@ -3288,8 +3314,9 @@ v_BOOL_t hdd_update_config_dat( hdd_context_t *pHddCtx )
 #endif
 
    hdd_config_t *pConfig = pHddCtx->cfg_ini;
-   tSirMacHTCapabilityInfo htCapInfo;
-
+   tSirMacHTCapabilityInfo *htCapInfo;
+   tANI_U32 temp32;
+   tANI_U16 temp16;
 
    if (ccmCfgSetInt(pHddCtx->hHal, WNI_CFG_SHORT_GI_20MHZ,
       pConfig->ShortGI20MhzEnable, NULL, eANI_BOOLEAN_FALSE)==eHAL_STATUS_FAILURE)
@@ -3790,11 +3817,14 @@ v_BOOL_t hdd_update_config_dat( hdd_context_t *pHddCtx )
          hddLog(LOGE, "Could not pass on WNI_CFG_HT_RX_STBC to CCM\n");
      }
 
-     ccmCfgGetInt(pHddCtx->hHal, WNI_CFG_HT_CAP_INFO, (tANI_U32 *)&htCapInfo);
-     htCapInfo.rxSTBC = pConfig->enableRxSTBC;
+     ccmCfgGetInt(pHddCtx->hHal, WNI_CFG_HT_CAP_INFO, &temp32);
+     temp16 = temp32 & 0xffff;
+     htCapInfo = (tSirMacHTCapabilityInfo *)&temp16;
+     htCapInfo->rxSTBC = pConfig->enableRxSTBC;
+     temp32 = temp16;
 
      if(ccmCfgSetInt(pHddCtx->hHal, WNI_CFG_HT_CAP_INFO,
-                     *(tANI_U32 *)&htCapInfo, NULL, eANI_BOOLEAN_FALSE)
+                     temp32, NULL, eANI_BOOLEAN_FALSE)
          ==eHAL_STATUS_FAILURE)
      {
          fStatus = FALSE;

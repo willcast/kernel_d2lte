@@ -666,10 +666,7 @@ static int get_candela_index(int bl_level)
 		backlightlevel = GAMMA_250CD; /* 22 */
 		break;
 	case 255:
-		if (mipi_pd.msd->dstat.auto_brightness == 0)
-			backlightlevel = GAMMA_250CD; /* 22 */
-		else
-			backlightlevel = GAMMA_300CD; /* 23 */
+		backlightlevel = GAMMA_300CD; /* 23 */
 		break;
 	default:
 		backlightlevel = GAMMA_40CD; /* 1 */
@@ -734,7 +731,7 @@ static int set_elvss_level(int bl_level)
 
 void reset_gamma_level(void)
 {
-	pr_info("reset_gamma_level\n");
+	pr_debug("reset_gamma_level\n");
 	mipi_pd.lcd_current_cd_idx = -1;
 	mipi_pd.ldi_acl_stat = false;
 	elvss_cond_set[2] = 0x00;
@@ -791,6 +788,11 @@ static int set_gamma_level(int bl_level, enum gamma_mode_list gamma_mode)
 		}
 
 	return 0;
+}
+
+int get_lcd_current_cd_index(void)
+{
+	return mipi_pd.lcd_current_cd_idx;
 }
 
 static int is_acl_para_change(int bl_level)
