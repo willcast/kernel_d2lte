@@ -668,6 +668,10 @@ static irqreturn_t mms_ts_interrupt(int irq, void *dev_id)
 			input_mt_report_slot_state(info->input_dev,
 						   MT_TOOL_FINGER, false);
 
+			if (id == 0) {
+				input_report_key(info->input_dev, BTN_TOUCH, 0);
+			}
+
 #if defined(SEC_TSP_DEBUG) || defined(SEC_TSP_VERBOSE_DEBUG)
 			info->finger_state[id] = 0;
 #endif
@@ -691,6 +695,13 @@ static irqreturn_t mms_ts_interrupt(int irq, void *dev_id)
 		input_report_abs(info->input_dev, ABS_MT_TOUCH_MINOR, tmp[7]);
 		input_report_abs(info->input_dev, ABS_MT_ANGLE, angle);
 		input_report_abs(info->input_dev, ABS_MT_PALM, palm);
+
+		if (id == 0) {
+			input_report_key(info->input_dev, BTN_TOUCH, 1);
+			input_report_abs(info->input_dev, ABS_X, x);
+			input_report_abs(info->input_dev, ABS_Y, y);
+		}
+
 #if defined(SEC_TSP_DEBUG)
 		if (info->finger_state[id] == 0) {
 			info->finger_state[id] = 1;
@@ -713,6 +724,7 @@ static irqreturn_t mms_ts_interrupt(int irq, void *dev_id)
 		if (info->finger_state[i] == 1)
 			touch_is_pressed++;
 	}
+
 
 #ifdef TOUCH_BOOSTER
 	set_dvfs_lock(info, !!touch_is_pressed);
@@ -2988,11 +3000,17 @@ static int __devinit mms_ts_probe(struct i2c_client *client,
 	input_dev->id.bustype = BUS_I2C;
 	input_dev->dev.parent = &client->dev;
 	__set_bit(EV_ABS, input_dev->evbit);
+	__set_bit(EV_KEY, input_dev->evbit);
 	__set_bit(INPUT_PROP_DIRECT, input_dev->propbit);
+        __set_bit(BTN_TOUCH, input_dev->keybit);
 	input_set_abs_params(input_dev, ABS_MT_WIDTH_MAJOR, 0, MAX_WIDTH, 0, 0);
 	input_set_abs_params(input_dev, ABS_MT_POSITION_X,
 				0, info->max_x, 0, 0);
+	input_set_abs_params(input_dev, ABS_X,
+				0, info->max_x, 0, 0);
 	input_set_abs_params(input_dev, ABS_MT_POSITION_Y,
+				0, info->max_y, 0, 0);
+	input_set_abs_params(input_dev, ABS_Y,
 				0, info->max_y, 0, 0);
 	input_set_abs_params(info->input_dev, ABS_MT_TOUCH_MAJOR,
 				0, MAX_PRESSURE, 0, 0);
@@ -3002,6 +3020,7 @@ static int __devinit mms_ts_probe(struct i2c_client *client,
 				MIN_ANGLE, MAX_ANGLE, 0, 0);
 	input_set_abs_params(input_dev, ABS_MT_PALM,
 				0, 1, 0, 0);
+
 	input_set_drvdata(input_dev, info);
 
 	ret = input_register_device(input_dev);
